@@ -16,7 +16,7 @@ const bannerSchema = new mongoose.Schema(
     mobileImage: {
       type: String,
     },
-    fruitImage: { // New field for the fruit image
+    fruitImage: {
       type: String,
     },
     bannerImages: [
@@ -37,7 +37,15 @@ const bannerSchema = new mongoose.Schema(
     },
     ingredients: [
       {
-        type: String,
+        name: {
+          type: String,
+          required: true,
+        },
+        type: {
+          type: String,
+          enum: ['primary', 'secondary'],
+          required: true,
+        },
       },
     ],
     bannerType: {

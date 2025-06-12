@@ -16,6 +16,7 @@ const {
 const bannerUpload = upload.fields([
   { name: 'image', maxCount: 1 },
   { name: 'mobileImage', maxCount: 1 },
+  { name: 'fruitImage', maxCount: 1 },
   { name: 'bannerImages', maxCount: 10 },
 ]);
 

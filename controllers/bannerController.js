@@ -57,7 +57,7 @@ const createBanner = asyncHandler(async (req, res) => {
     throw new Error('Title is required');
   }
 
-  if (!req.files || !req.files.image) {
+  if (!req.files || !req.files.image || !req.files.image[0]) {
     res.status(400);
     throw new Error('Please upload at least the main image');
   }
@@ -70,7 +70,12 @@ const createBanner = asyncHandler(async (req, res) => {
       if (!Array.isArray(parsedIngredients)) {
         throw new Error('Ingredients must be an array');
       }
-      parsedIngredients = parsedIngredients.map(ing => String(ing));
+      parsedIngredients = parsedIngredients
+        .filter(ing => ing.name && ing.name.trim() && ['primary', 'secondary'].includes(ing.type))
+        .map(ing => ({
+          name: String(ing.name).trim(),
+          type: ing.type,
+        }));
     } catch (error) {
       console.error('Error parsing ingredients:', error);
       res.status(400);
@@ -97,7 +102,7 @@ const createBanner = asyncHandler(async (req, res) => {
   const bannerData = {
     title,
     description: description || '',
-    image: `/uploads/${req.files.image[0].filename}`,
+    image: `/Uploads/${req.files.image[0].filename}`,
     linkUrl: linkUrl || '',
     ingredients: parsedIngredients,
     bannerType: bannerType || 'home_slider',
@@ -110,12 +115,12 @@ const createBanner = asyncHandler(async (req, res) => {
   };
 
   // Add mobile image if provided
-  if (req.files.mobileImage) {
+  if (req.files.mobileImage && req.files.mobileImage[0]) {
     bannerData.mobileImage = `/Uploads/${req.files.mobileImage[0].filename}`;
   }
 
   // Add fruit image if provided
-  if (req.files.fruitImage) {
+  if (req.files.fruitImage && req.files.fruitImage[0]) {
     bannerData.fruitImage = `/Uploads/${req.files.fruitImage[0].filename}`;
   }
 
@@ -186,7 +191,12 @@ const updateBanner = asyncHandler(async (req, res) => {
       if (!Array.isArray(parsedIngredients)) {
         throw new Error('Ingredients must be an array');
       }
-      parsedIngredients = parsedIngredients.map(ing => String(ing));
+      parsedIngredients = parsedIngredients
+        .filter(ing => ing.name && ing.name.trim() && ['primary', 'secondary'].includes(ing.type))
+        .map(ing => ({
+          name: String(ing.name).trim(),
+          type: ing.type,
+        }));
     } catch (error) {
       console.error('Error parsing ingredients:', error);
       res.status(400);
@@ -224,15 +234,15 @@ const updateBanner = asyncHandler(async (req, res) => {
 
   // Handle image updates
   if (req.files) {
-    if (req.files.image) {
+    if (req.files.image && req.files.image[0]) {
       await deleteOldImage(banner.image);
       banner.image = `/Uploads/${req.files.image[0].filename}`;
     }
-    if (req.files.mobileImage) {
+    if (req.files.mobileImage && req.files.mobileImage[0]) {
       await deleteOldImage(banner.mobileImage);
       banner.mobileImage = `/Uploads/${req.files.mobileImage[0].filename}`;
     }
-    if (req.files.fruitImage) {
+    if (req.files.fruitImage && req.files.fruitImage[0]) {
       await deleteOldImage(banner.fruitImage);
       banner.fruitImage = `/Uploads/${req.files.fruitImage[0].filename}`;
     }
@@ -307,13 +317,7 @@ const getHomeSliders = asyncHandler(async (req, res) => {
     .sort({ displayOrder: 1 })
     .limit(2);
 
-  // Ensure ingredients are returned as strings
-  const formattedSliders = sliders.map((slider) => ({
-    ...slider.toObject(),
-    ingredients: slider.ingredients.map((ing) => String(ing)),
-  }));
-
-  res.json(formattedSliders);
+  res.json(sliders);
 });
 
 // @desc    Get all banners (including inactive) for admin
@@ -329,13 +333,7 @@ const getAllBannersAdmin = asyncHandler(async (req, res) => {
 
   const banners = await Banner.find(query).sort({ displayOrder: 1, createdAt: -1 });
 
-  // Format ingredients for admin view
-  const formattedBanners = banners.map((banner) => ({
-    ...banner.toObject(),
-    ingredients: banner.ingredients.map((ing) => String(ing)),
-  }));
-
-  res.json(formattedBanners);
+  res.json(banners);
 });
 
 module.exports = {
