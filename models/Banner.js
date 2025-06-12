@@ -1,82 +1,80 @@
-// const mongoose = require('mongoose');
-
-// const bannerSchema = new mongoose.Schema({
-//   title: {
-//     type: String,
-//     required: true
-//   },
-//   subtitle: {
-//     type: String
-//   },
-//   image: {
-//     type: String,
-//     required: true
-//   },
-//   link: {
-//     type: String
-//   },
-//   isActive: {
-//     type: Boolean,
-//     default: true
-//   },
-//   createdAt: {
-//     type: Date,
-//     default: Date.now
-//   }
-// });
-
-// module.exports = mongoose.model('Banner', bannerSchema);
-
-// models/Banner.js
 const mongoose = require('mongoose');
 
-const bannerSchema = new mongoose.Schema({
-  title: {
-    type: String,
-    required: true
+const bannerSchema = new mongoose.Schema(
+  {
+    title: {
+      type: String,
+      required: true,
+    },
+    description: {
+      type: String,
+    },
+    image: {
+      type: String,
+      required: true,
+    },
+    mobileImage: {
+      type: String,
+    },
+    fruitImage: { // New field for the fruit image
+      type: String,
+    },
+    bannerImages: [
+      {
+        url: {
+          type: String,
+          required: true,
+        },
+        type: {
+          type: String,
+          enum: ['home-slider', 'inner-page'],
+          required: true,
+        },
+      },
+    ],
+    linkUrl: {
+      type: String,
+    },
+    ingredients: [
+      {
+        type: String,
+      },
+    ],
+    bannerType: {
+      type: String,
+      enum: ['home_slider', 'inner_page'],
+      required: true,
+    },
+    page: {
+      type: String,
+      enum: ['homepage', 'menu', 'about', 'contact', null],
+      default: 'homepage',
+    },
+    displayOrder: {
+      type: Number,
+      default: 0,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    startDate: {
+      type: Date,
+      required: true,
+    },
+    endDate: {
+      type: Date,
+      required: true,
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
   },
-  subtitle: {
-    type: String
-  },
-  image: {
-    type: String,
-    required: true
-  },
-  mobileImage: {
-    type: String // Optional different image for mobile
-  },
-  link: {
-    type: String
-  },
-  ingredients: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Ingredient'
-  }],
-  bannerType: {
-    type: String,
-    enum: ['home_slider', 'beverage', 'smoothie', 'promo'],
-    required: true
-  },
-  page: {
-    type: String,
-    enum: ['home', 'menu', 'about', 'contact', null],
-    default: null
-  },
-  displayOrder: {
-    type: Number,
-    default: 0
-  },
-  isActive: {
-    type: Boolean,
-    default: true
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
+  {
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
-}, {
-  toJSON: { virtuals: true },
-  toObject: { virtuals: true }
-});
+);
 
 module.exports = mongoose.model('Banner', bannerSchema);

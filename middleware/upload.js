@@ -1,6 +1,24 @@
 const multer = require('multer');
-const { uploadDir, maxFileSize, allowedFileTypes } = require('../config/upload');
 const path = require('path');
+const fs = require('fs').promises;
+
+// Define upload directory and constraints
+const uploadDir = path.join(__dirname, '../public/uploads');
+const maxFileSize = 5 * 1024 * 1024; // 5MB
+const allowedFileTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+// Ensure upload directory exists
+const ensureUploadDir = async () => {
+  try {
+    await fs.mkdir(uploadDir, { recursive: true });
+    console.log(`Upload directory ensured at: ${uploadDir}`);
+  } catch (error) {
+    console.error('Error creating upload directory:', error);
+  }
+};
+
+// Call ensureUploadDir on module load
+ensureUploadDir();
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -16,7 +34,7 @@ const fileFilter = (req, file, cb) => {
   if (allowedFileTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type. Only JPEG, PNG, and GIF are allowed.'), false);
+    cb(new Error('Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.'), false);
   }
 };
 
