@@ -136,13 +136,12 @@ const getProductById = asyncHandler(async (req, res) => {
 const createProduct = asyncHandler(async (req, res) => {
   const {
     name,
+    sku,
     description,
     price,
     costPrice,
     category,
     stock,
-    volume,
-    sku,
     barcode,
     weight,
     dimensions,
@@ -153,10 +152,21 @@ const createProduct = asyncHandler(async (req, res) => {
     existingImages
   } = req.body;
 
+  if (!name || !sku || !price || !category || !stock) {
+    res.status(400);
+    throw new Error('Name, SKU, price, category, and stock are required');
+  }
+
   const productExists = await Product.findOne({ name });
   if (productExists) {
     res.status(400);
-    throw new Error('Product already exists');
+    throw new Error('Product with this name already exists');
+  }
+
+  const skuExists = await Product.findOne({ sku });
+  if (skuExists) {
+    res.status(400);
+    throw new Error('SKU already exists');
   }
 
   const categoryExists = await Category.findById(category);
@@ -186,17 +196,16 @@ const createProduct = asyncHandler(async (req, res) => {
   const parsedSelectedPages = selectedPages ? JSON.parse(selectedPages) : [];
   const parsedDimensions = dimensions ? JSON.parse(dimensions) : undefined;
 
-  const product = new Product({
+  const productData = {
     name,
+    sku,
     description,
     price: Number(price),
     costPrice: costPrice ? Number(costPrice) : undefined,
     category,
     stock: Number(stock),
-    volume: volume ? Number(volume) : undefined,
-    volumeUnit: volume ? 'L' : undefined,
-    sku,
-    barcode,
+    volume: req.body.volume ? Number(req.body.volume) : undefined,
+    volumeUnit: req.body.volume ? 'L' : undefined,
     weight: weight ? Number(weight) : undefined,
     dimensions: parsedDimensions,
     images,
@@ -204,24 +213,44 @@ const createProduct = asyncHandler(async (req, res) => {
     tags: tags ? tags.split(',').map(tag => tag.trim()) : [],
     recipes: parsedRecipes,
     selectedPages: parsedSelectedPages
-  });
+  };
 
-  const createdProduct = await product.save();
-
-  const populatedProduct = await Product.findById(createdProduct._id).populate('category', 'name');
-
-  const responseProduct = populatedProduct.toObject();
-  if (responseProduct.images) {
-    responseProduct.images = getImageUrls(req, responseProduct.images);
-  }
-  if (responseProduct.category) {
-    responseProduct.category = {
-      _id: responseProduct.category._id.toString(),
-      name: responseProduct.category.name
-    };
+  // Only include barcode if it’s provided and not an empty string
+  if (barcode && barcode.trim()) {
+    productData.barcode = barcode.trim();
   }
 
-  res.status(201).json(responseProduct);
+  const product = new Product(productData);
+
+  try {
+    const createdProduct = await product.save();
+    const populatedProduct = await Product.findById(createdProduct._id).populate('category', 'name');
+
+    const responseProduct = populatedProduct.toObject();
+    if (responseProduct.images) {
+      responseProduct.images = getImageUrls(req, responseProduct.images);
+    }
+    if (responseProduct.category) {
+      responseProduct.category = {
+        _id: responseProduct.category._id.toString(),
+        name: responseProduct.category.name
+      };
+    }
+
+    res.status(201).json(responseProduct);
+  } catch (error) {
+    if (error.code === 11000) {
+      if (error.keyPattern && error.keyPattern.sku) {
+        res.status(400);
+        throw new Error('SKU already exists');
+      }
+      if (error.keyPattern && error.keyPattern.name) {
+        res.status(400);
+        throw new Error('Product name already exists');
+      }
+    }
+    throw error;
+  }
 });
 
 // @desc    Update a product
@@ -230,13 +259,13 @@ const createProduct = asyncHandler(async (req, res) => {
 const updateProduct = asyncHandler(async (req, res) => {
   const {
     name,
+    sku,
     description,
     price,
     costPrice,
     category,
     stock,
     volume,
-    sku,
     barcode,
     weight,
     dimensions,
@@ -249,8 +278,29 @@ const updateProduct = asyncHandler(async (req, res) => {
 
   const product = await Product.findById(req.params.id);
   if (!product) {
-    res.status(404);
+    res.status(400);
     throw new Error('Product not found');
+  }
+
+  if (!name || !sku || !price || !category || !stock) {
+    res.status(400);
+    throw new Error('Name, SKU, price, category, and stock are required');
+  }
+
+  if (name !== product.name) {
+    const productExists = await Product.findOne({ name });
+    if (productExists) {
+      res.status(400);
+      throw new Error('Product with this name already exists');
+    }
+  }
+
+  if (sku !== product.sku) {
+    const skuExists = await Product.findOne({ sku });
+    if (skuExists) {
+      res.status(400);
+      throw new Error('SKU already exists');
+    }
   }
 
   if (category) {
@@ -289,6 +339,7 @@ const updateProduct = asyncHandler(async (req, res) => {
   }
 
   product.name = name || product.name;
+  product.sku = sku || product.sku;
   product.description = description !== undefined ? description : product.description;
   product.price = price !== undefined ? Number(price) : product.price;
   product.costPrice = costPrice !== undefined ? Number(costPrice) : product.costPrice;
@@ -296,8 +347,6 @@ const updateProduct = asyncHandler(async (req, res) => {
   product.stock = stock !== undefined ? Number(stock) : product.stock;
   product.volume = volume !== undefined ? Number(volume) : product.volume;
   product.volumeUnit = volume !== undefined ? 'L' : product.volumeUnit;
-  product.sku = sku || product.sku;
-  product.barcode = barcode || product.barcode;
   product.weight = weight !== undefined ? Number(weight) : product.weight;
   product.dimensions = dimensions ? JSON.parse(dimensions) : product.dimensions;
   product.isActive = isActive !== undefined ? isActive !== 'false' : product.isActive;
@@ -306,22 +355,42 @@ const updateProduct = asyncHandler(async (req, res) => {
   product.selectedPages = selectedPages ? JSON.parse(selectedPages) : product.selectedPages;
   product.images = images;
 
-  const updatedProduct = await product.save();
-
-  const populatedProduct = await Product.findById(updatedProduct._id).populate('category', 'name');
-
-  const responseProduct = populatedProduct.toObject();
-  if (responseProduct.images) {
-    responseProduct.images = getImageUrls(req, responseProduct.images);
-  }
-  if (responseProduct.category) {
-    responseProduct.category = {
-      _id: responseProduct.category._id.toString(),
-      name: responseProduct.category.name
-    };
+  // Only update barcode if it’s provided and not an empty string
+  if (barcode !== undefined && barcode.trim()) {
+    product.barcode = barcode.trim();
+  } else {
+    product.barcode = undefined; // Remove barcode if not provided
   }
 
-  res.json(responseProduct);
+  try {
+    const updatedProduct = await product.save();
+    const populatedProduct = await Product.findById(updatedProduct._id).populate('category', 'name');
+
+    const responseProduct = populatedProduct.toObject();
+    if (responseProduct.images) {
+      responseProduct.images = getImageUrls(req, responseProduct.images);
+    }
+    if (responseProduct.category) {
+      responseProduct.category = {
+        _id: responseProduct.category._id.toString(),
+        name: responseProduct.category.name
+      };
+    }
+
+    res.json(responseProduct);
+  } catch (error) {
+    if (error.code === 11000) {
+      if (error.keyPattern && error.keyPattern.sku) {
+        res.status(400);
+        throw new Error('SKU already exists');
+      }
+      if (error.keyPattern && error.keyPattern.name) {
+        res.status(400);
+        throw new Error('Product name already exists');
+      }
+    }
+    throw error;
+  }
 });
 
 // @desc    Delete a product

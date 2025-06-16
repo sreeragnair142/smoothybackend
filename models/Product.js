@@ -21,75 +21,85 @@ const recipeSchema = new mongoose.Schema({
 const productSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: true,
+    required: [true, 'Product name is required'],
     unique: true,
     trim: true
   },
+  sku: {
+    type: String,
+    required: [true, 'SKU is required'],
+    unique: true,
+    trim: true,
+    validate: {
+      validator: function(v) {
+        return v && v.length > 0;
+      },
+      message: 'SKU cannot be empty'
+    }
+  },
   description: {
     type: String,
-    required: true
+    trim: true,
+    default: ''
   },
   price: {
     type: Number,
-    required: true,
-    min: 0
+    required: [true, 'Price is required'],
+    min: [0, 'Price cannot be negative']
   },
   costPrice: {
     type: Number,
-    required: true,
-    min: 0
+    min: [0, 'Cost price cannot be negative'],
+    default: undefined
   },
   category: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Category',
-    required: true
+    required: [true, 'Category is required']
   },
   stock: {
     type: Number,
-    required: true,
-    min: 0,
+    required: [true, 'Stock quantity is required'],
+    min: [0, 'Stock cannot be negative'],
     default: 0
-  },
-  sku: {
-    type: String,
-    unique: true,
-    trim: true
   },
   barcode: {
     type: String,
-    unique: true,
-    trim: true
+    trim: true,
+    sparse: true // Keep sparse to allow missing barcodes
   },
   volume: {
     type: Number,
-    required: true
+    min: [0, 'Volume cannot be negative'],
+    default: undefined
   },
   volumeUnit: {
     type: String,
-    default: 'L',
-    enum: ['mL', 'L', 'oz']
+    default: undefined,
+    enum: ['mL', 'L', 'oz', null]
   },
   weight: {
     type: Number,
-    min: 0
+    min: [0, 'Weight cannot be negative'],
+    default: undefined
   },
   dimensions: {
-    length: Number,
-    width: Number,
-    height: Number
+    length: { type: Number, min: 0 },
+    width: { type: Number, min: 0 },
+    height: { type: Number, min: 0 }
   },
-  images: [String],
+  images: [{ type: String, trim: true }],
   isActive: {
     type: Boolean,
     default: true
   },
-  tags: [String],
+  tags: [{ type: String, trim: true }],
   recipes: [recipeSchema],
   ratings: {
     average: {
       type: Number,
-      min: 0,
-      max: 5,
+      min: [0, 'Rating cannot be negative'],
+      max: [5, 'Rating cannot exceed 5'],
       default: 0
     },
     count: {
