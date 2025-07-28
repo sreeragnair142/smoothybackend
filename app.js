@@ -28,7 +28,9 @@ app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
 app.use('/api', require('./routes'));
 app.use('/api/products', require('./routes/productRoutes'));
 
-
+app.get('/', (req, res) => {
+  res.json({ message: "Hello, Server Started ismoothies.ae" });
+});
 
 const bannerRoutes = require('./routes/bannerRoutes');
 app.use('/api/banners', bannerRoutes);
